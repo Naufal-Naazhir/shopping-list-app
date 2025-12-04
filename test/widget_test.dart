@@ -7,6 +7,7 @@
 
 import 'package:belanja_praktis/main.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> main() async {
@@ -14,6 +15,8 @@ Future<void> main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('App starts and shows LoginScreen', (WidgetTester tester) async {
+    // Load .env file
+    await dotenv.load(fileName: ".env");
     // Ensure all dependencies are set up before running the test, skipping platform-specific services.
     await setupDependencies(isTest: true);
 

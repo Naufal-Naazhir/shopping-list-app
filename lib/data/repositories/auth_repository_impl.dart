@@ -6,13 +6,17 @@ import 'package:belanja_praktis/data/repositories/auth_repository.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthRepositoryImpl extends ChangeNotifier implements AuthRepository {
+  final Client _client; // Store the client
   final Account _account;
   final Databases _databases;
 
-  AuthRepositoryImpl(this._account, this._databases);
+  AuthRepositoryImpl(this._client, this._account, this._databases);
 
   @override
-  Future<User?> login(String email, String password) async {
+  Client get client => _client; // Implement the getter
+
+  @override
+  Future<UserModel?> login(String email, String password) async {
     try {
       await _account.createEmailPasswordSession(
         email: email,
@@ -31,7 +35,7 @@ class AuthRepositoryImpl extends ChangeNotifier implements AuthRepository {
   }
 
   @override
-  Future<User?> register(
+  Future<UserModel?> register(
     String username,
     String? email,
     String password,
@@ -41,6 +45,8 @@ class AuthRepositoryImpl extends ChangeNotifier implements AuthRepository {
     }
 
     // Check if username is unique in our custom users collection
+    /* This check is commented out because it requires read access for unauthenticated
+     * users, which is a security risk. User uniqueness will be enforced by email.
     try {
       final usernameQuery = await _databases.listDocuments(
         databaseId: AppwriteDB.databaseId,
@@ -54,6 +60,7 @@ class AuthRepositoryImpl extends ChangeNotifier implements AuthRepository {
       print('Error checking username uniqueness: $e');
       throw Exception('Failed to check username uniqueness.');
     }
+    */
 
     try {
       // Create user in Appwrite Auth
@@ -64,22 +71,31 @@ class AuthRepositoryImpl extends ChangeNotifier implements AuthRepository {
         name: username, // Use name for username in Appwrite Auth
       );
 
+      // CRITICAL FIX: Log the user in immediately after creation
+      await _account.createEmailPasswordSession(email: email, password: password);
+
       // Create document in our custom users collection
-      final newUser = User(
-        uid: appwriteUser.$id,
-        username: username,
+      final newUser = UserModel(
+        uid: appwriteUser.$id, // Menggunakan uid
+        username: username,    // Menggunakan username
         email: email,
         isPremium: false,
-        createdAt:
-            DateTime.now(), // Appwrite will set $createdAt, but we keep it for local model consistency
+        aiUsesRemaining: 5,
       );
 
       await _databases.createDocument(
         databaseId: AppwriteDB.databaseId,
         collectionId: AppwriteDB.usersCollectionId,
-        documentId: ID.unique(), // Use unique ID for the document
-        data: newUser.toAppwrite(),
+        documentId: appwriteUser.$id, // CRITICAL FIX: Use the Auth User ID as the Document ID
+        data: newUser.toJson(),
+        permissions: [
+          Permission.read(Role.user(appwriteUser.$id)), // User can read their own document
+          Permission.update(Role.user(appwriteUser.$id)), // User can update their own document
+        ],
       );
+
+      // Log the user out immediately after registration to force them to the login screen
+      await logout();
 
       return newUser;
     } on AppwriteException catch (e) {
@@ -106,7 +122,7 @@ class AuthRepositoryImpl extends ChangeNotifier implements AuthRepository {
   }
 
   @override
-  Future<User?> getCurrentUser() async {
+  Future<UserModel?> getCurrentUser() async {
     try {
       final appwriteAuthUser = await _account.get();
       final userDbDoc = await _getUserDbDoc(appwriteAuthUser.$id);
@@ -129,7 +145,7 @@ class AuthRepositoryImpl extends ChangeNotifier implements AuthRepository {
         };
       }
 
-      return User.fromAppwrite(combinedData);
+      return UserModel.fromJson(combinedData);
     } on AppwriteException catch (e) {
       if (e.code == 401) {
         // User not logged in
@@ -191,14 +207,14 @@ class AuthRepositoryImpl extends ChangeNotifier implements AuthRepository {
   }
 
   @override
-  Future<List<User>> getAllUsers() async {
+  Future<List<UserModel>> getAllUsers() async {
     throw UnimplementedError(
       'This function requires admin privileges and is not implemented in the client.',
     );
   }
 
   @override
-  Future<void> deleteUser(String username) async {
+  Future<void> deleteUser(String userUid) async {
     throw UnimplementedError(
       'This function requires admin privileges and is not implemented in the client.',
     );
@@ -212,35 +228,27 @@ class AuthRepositoryImpl extends ChangeNotifier implements AuthRepository {
   }
 
   @override
-  Future<void> decrementAiUses(User user) async {
+  Future<void> decrementAiUses(UserModel user) async {
+    // As per user's request, AI usage is no longer limited for any user.
+    // The decrement operation is now a no-op.
+    return;
+  }
+
+  @override
+  Future<bool> isAdmin(String userUid) async {
     try {
-      // First, find the document ID of the user
-      final response = await _databases.listDocuments(
-        databaseId: AppwriteDB.databaseId,
-        collectionId: AppwriteDB.usersCollectionId,
-        queries: [Query.equal('uid', user.uid)],
-      );
-
-      if (response.documents.isEmpty) {
-        throw Exception('User document not found.');
-      }
-      final documentId = response.documents.first.$id;
-
-      // Now, update the document
-      await _databases.updateDocument(
-        databaseId: AppwriteDB.databaseId,
-        collectionId: AppwriteDB.usersCollectionId,
-        documentId: documentId,
-        data: {
-          'aiUsesRemaining': user.aiUsesRemaining - 1,
-        },
-      );
+      final appwriteAuthUser = await _account.get(); // Get current logged in user
+      return appwriteAuthUser.labels.contains('admin');
     } on AppwriteException catch (e) {
-      print('Appwrite decrementAiUses error: ${e.message}');
-      throw Exception(e.message ?? 'Failed to decrement AI uses.');
+      if (e.code == 401) {
+        // Not logged in or session expired
+        return false;
+      }
+      print('Appwrite isAdmin error: ${e.message}');
+      return false;
     } catch (e) {
-      print('decrementAiUses error: $e');
-      throw Exception('Failed to decrement AI uses.');
+      print('isAdmin error: $e');
+      return false;
     }
   }
 }

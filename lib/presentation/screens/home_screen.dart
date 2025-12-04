@@ -1,5 +1,8 @@
 import 'package:belanja_praktis/data/models/shopping_list_model.dart';
 import 'package:belanja_praktis/data/repositories/auth_repository.dart';
+import 'package:belanja_praktis/presentation/bloc/payment_status_bloc.dart';
+import 'package:belanja_praktis/presentation/bloc/payment_status_event.dart';
+import 'package:belanja_praktis/presentation/bloc/payment_status_state.dart';
 import 'package:belanja_praktis/presentation/bloc/shopping_list_bloc.dart';
 import 'package:belanja_praktis/presentation/widgets/list_card.dart';
 import 'package:flutter/material.dart';
@@ -23,26 +26,40 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _startPaymentMonitoring();
     _checkPremiumStatus();
     // Ensure lists are loaded when the screen initializes
     context.read<ShoppingListBloc>().add(LoadShoppingLists());
     _loadBannerAd();
   }
 
-  void _loadBannerAd() {
-    _bannerAd = BannerAd(
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111',
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          setState(() {});
-        },
-        onAdFailedToLoad: (ad, err) {
-          ad.dispose();
-        },
-      ),
-    )..load();
+  Future<void> _startPaymentMonitoring() async {
+    final user = await _authRepository.getCurrentUser();
+    if (user != null && mounted) {
+      context
+          .read<PaymentStatusBloc>()
+          .add(StartPaymentStatusMonitoring(user.uid));
+    }
+  }
+
+  void _loadBannerAd() async {
+    // Only load ads if user is not premium
+    final isPremium = await _authRepository.isCurrentUserPremium();
+    if (!isPremium) {
+      _bannerAd = BannerAd(
+        adUnitId: 'ca-app-pub-3940256099942544/6300978111',
+        request: const AdRequest(),
+        size: AdSize.banner,
+        listener: BannerAdListener(
+          onAdLoaded: (ad) {
+            setState(() {});
+          },
+          onAdFailedToLoad: (ad, err) {
+            ad.dispose();
+          },
+        ),
+      )..load();
+    }
   }
 
   @override
@@ -51,8 +68,22 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkPremiumStatus(); // Re-check premium status when dependencies change (e.g., returning from another screen)
+  }
+
   Future<void> _checkPremiumStatus() async {
+    final wasPremium = _isCurrentUserPremium;
     _isCurrentUserPremium = await _authRepository.isCurrentUserPremium();
+    
+    // If user just became premium, dispose the ad
+    if (!wasPremium && _isCurrentUserPremium) {
+      _bannerAd?.dispose();
+      _bannerAd = null;
+    }
+    
     setState(() {}); // Rebuild to reflect premium status
   }
 
@@ -84,10 +115,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 if (_editController.text.isNotEmpty) {
                   context.read<ShoppingListBloc>().add(
-                    UpdateShoppingList(
-                      list.copyWith(name: _editController.text),
-                    ),
-                  );
+                        UpdateShoppingList(
+                          list.copyWith(name: _editController.text),
+                        ),
+                      );
                   Navigator.of(dialogContext).pop();
                 }
               },
@@ -119,8 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Text('Delete'),
               onPressed: () {
                 context.read<ShoppingListBloc>().add(
-                  DeleteShoppingList(list.id.toString()),
-                );
+                      DeleteShoppingList(list.id.toString()),
+                    );
                 Navigator.of(dialogContext).pop();
               },
             ),
@@ -145,69 +176,91 @@ class _HomeScreenState extends State<HomeScreen> {
           // ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: BlocBuilder<ShoppingListBloc, ShoppingListState>(
-              builder: (context, state) {
-                if (state is ShoppingListLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (state is ShoppingListLoaded) {
-                  if (state.lists.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'No lists yet',
-                              style: TextStyle(fontSize: 20, color: Colors.grey),
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Tap the + button below to create your first list',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 16, color: Colors.grey),
-                            ),
-                          ],
+      body: BlocListener<PaymentStatusBloc, PaymentStatusState>(
+        listener: (context, state) {
+          if (state is PaymentStatusSuccess) {
+            _checkPremiumStatus(); // Refresh the UI to reflect premium status
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text("Pembayaran Berhasil! 👑"),
+                content: Text(state.message),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("OK"),
+                  )
+                ],
+              ),
+            );
+          }
+        },
+        child: Column(
+          children: [
+            Expanded(
+              child: BlocBuilder<ShoppingListBloc, ShoppingListState>(
+                builder: (context, state) {
+                  if (state is ShoppingListLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (state is ShoppingListLoaded) {
+                    if (state.lists.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'No lists yet',
+                                style:
+                                    TextStyle(fontSize: 20, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Tap the + button below to create your first list',
+                                textAlign: TextAlign.center,
+                                style:
+                                    TextStyle(fontSize: 16, color: Colors.grey),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  } else {
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: state.lists.length,
-                      itemBuilder: (context, index) {
-                        final list = state.lists[index];
-                        return ListCard(
-                          list: list,
-                          index: index,
-                          onEdit: () => _showEditListModal(context, list),
-                          onDelete: () => _showDeleteListModal(context, list),
-                        );
-                      },
-                    );
+                      );
+                    } else {
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: state.lists.length,
+                        itemBuilder: (context, index) {
+                          final list = state.lists[index];
+                          return ListCard(
+                            list: list,
+                            index: index,
+                            onEdit: () => _showEditListModal(context, list),
+                            onDelete: () => _showDeleteListModal(context, list),
+                          );
+                        },
+                      );
+                    }
+                  } else if (state is ShoppingListError) {
+                    return Center(child: Text('Error: ${state.message}'));
                   }
-                } else if (state is ShoppingListError) {
-                  return Center(child: Text('Error: ${state.message}'));
-                }
-                return const Center(child: Text('Unknown state'));
-              },
-            ),
-          ),
-          if (_bannerAd != null)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: SafeArea(
-                child: SizedBox(
-                  width: _bannerAd!.size.width.toDouble(),
-                  height: _bannerAd!.size.height.toDouble(),
-                  child: AdWidget(ad: _bannerAd!),
-                ),
+                  return const Center(child: Text('Unknown state'));
+                },
               ),
             ),
-        ],
+            if (_bannerAd != null && !_isCurrentUserPremium)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: SafeArea(
+                  child: SizedBox(
+                    width: _bannerAd!.size.width.toDouble(),
+                    height: _bannerAd!.size.height.toDouble(),
+                    child: AdWidget(ad: _bannerAd!),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
       floatingActionButton: BlocBuilder<ShoppingListBloc, ShoppingListState>(
         builder: (context, state) {
@@ -260,9 +313,22 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               child: const Text('Upgrade'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.go('/premium-analytics');
+              onPressed: () async {
+                final user = await _authRepository.getCurrentUser();
+                Navigator.of(context).pop(); // Close the dialog first
+                if (user != null) {
+                  // Wait for the user to return from the payment page
+                  await context.push(
+                    '/upgrade',
+                    extra: {'userEmail': user.email, 'userId': user.uid},
+                  );
+                  // After returning, force a refresh of the premium status
+                  _checkPremiumStatus();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not get user data. Please try again.')),
+                  );
+                }
               },
             ),
           ],
@@ -271,3 +337,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+

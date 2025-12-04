@@ -1,21 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:belanja_praktis/services/local_storage_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/models/recipe_template_model.dart';
 // Import ShoppingItem model
 import '../data/models/shopping_list_model.dart';
-import '../data/models/recipe_template_model.dart';
 import '../data/repositories/local_template_repository.dart';
-import 'package:belanja_praktis/services/local_storage_service.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'template_manager_new.dart' as tm;
 
 class AIService {
-  // API key Cohere - Loaded from environment variables
-  final String _apiKey = dotenv.env['COHERE_API_KEY'] ?? '';
-  static const String _endpoint = 'https://api.cohere.ai/v1/chat';
+  // API configuration - Loaded from environment variables
+  final String _apiKey = dotenv.get('COHERE_API_KEY');
+  late final String _endpoint;
 
   final http.Client _client;
   final LocalStorageService _storage;
@@ -24,8 +24,13 @@ class AIService {
   static const Duration _timeout = Duration(seconds: 30);
 
   AIService(this._storage) : _client = http.Client() {
-    if (_apiKey.isEmpty) {
-      throw Exception('COHERE_API_KEY is not set in the .env file.');
+    try {
+      _endpoint = dotenv.get('COHERE_ENDPOINT');
+      if (_apiKey.isEmpty) {
+        throw Exception('COHERE_API_KEY is not set in the .env file.');
+      }
+    } catch (e) {
+      throw Exception('Failed to load environment variables: $e');
     }
     SharedPreferences.getInstance().then((prefs) {
       final localRepo = LocalTemplateRepository(prefs);
@@ -41,8 +46,10 @@ class AIService {
   Map<String, dynamic> _parseAIResponse(String jsonString) {
     try {
       final decoded = json.decode(jsonString);
-      final List<dynamic> itemMaps = decoded['items'] ?? []; // Default to empty list
-      final List<dynamic> stepsList = decoded['steps'] ?? []; // Safely get steps
+      final List<dynamic> itemMaps =
+          decoded['items'] ?? []; // Default to empty list
+      final List<dynamic> stepsList =
+          decoded['steps'] ?? []; // Safely get steps
       double total = double.tryParse(decoded['total'].toString()) ?? 0.0;
 
       List<ShoppingItem> shoppingItems = [];
@@ -63,14 +70,25 @@ class AIService {
       return {'items': shoppingItems, 'total': total, 'steps': steps};
     } catch (e) {
       // If parsing fails, throw a more informative error
-      throw Exception('Failed to parse JSON from AI. Raw response: "$jsonString"');
+      throw Exception(
+        'Failed to parse JSON from AI. Raw response: "$jsonString"',
+      );
     }
   }
 
   Future<Map<String, dynamic>> _generateFromAI(String query) async {
     String prompt;
     final queryLower = query.toLowerCase();
-    final recipeKeywords = ['resep', 'bahan', 'langkah', 'cara membuat', 'recipe', 'ingredients', 'steps', 'how to make'];
+    final recipeKeywords = [
+      'resep',
+      'bahan',
+      'langkah',
+      'cara membuat',
+      'recipe',
+      'ingredients',
+      'steps',
+      'how to make',
+    ];
 
     if (recipeKeywords.any((keyword) => queryLower.contains(keyword))) {
       // Use the detailed recipe prompt
@@ -80,8 +98,7 @@ Format JSON:{"items":[{"name":"nama_item","quantity":"jumlah","unit":"satuan","p
 Aturan: Sertakan hanya bahan-bahan yang relevan. Satuan harus salah satu dari: gram, kg, butir, siung, sdm, sdt, ml, liter, buah, batang, lembar. Harga dalam Rupiah tanpa simbol atau pemisah. Respons HANYA JSON.''';
     } else {
       // Use a more general shopping list prompt
-      prompt =
-          '''Berikan daftar belanja untuk "$query".
+      prompt = '''Berikan daftar belanja untuk "$query".
 Format JSON:{"items":[{"name":"nama_item","quantity":"jumlah","unit":"satuan","price":harga}],"total":total_harga}
 Aturan: Satuan harus umum (misal: buah, kg, pack). Harga dalam Rupiah tanpa simbol atau pemisah. Respons HANYA JSON.''';
     }

@@ -29,7 +29,7 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
   // State variables
   bool _isLoading = false;
   bool _isManualMode = true;
-  User? _currentUser; // To hold the current user
+  UserModel? _currentUser; // To hold the current user
   List<ShoppingItem> _generatedShoppingItems = [];
   double _generatedTotal = 0;
   List<String> _generatedSteps = []; // To hold recipe steps

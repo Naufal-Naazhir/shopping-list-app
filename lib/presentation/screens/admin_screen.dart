@@ -17,7 +17,7 @@ class _AdminScreenState extends State<AdminScreen> {
   bool _isAdmin = false;
   bool _isLoading = true;
 
-  List<User> _users = [];
+  List<UserModel> _users = [];
   int _totalUsers = 0;
   int _premiumUsers = 0;
   int _freeUsers = 0;
@@ -30,9 +30,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Future<void> _checkAdminStatus() async {
     final currentUser = await _authRepository.getCurrentUser();
-    // NOTE: Your User model must have a `labels` property (List<String>)
-    // to correctly parse the user data from Appwrite.
-    if (currentUser != null && currentUser.labels.contains('admin')) {
+    if (currentUser != null && await _authRepository.isAdmin(currentUser.uid)) {
       setState(() {
         _isAdmin = true;
       });
@@ -57,7 +55,7 @@ class _AdminScreenState extends State<AdminScreen> {
     // The actual implementation will involve calling the Appwrite Function.
   }
 
-  Future<void> _togglePremiumStatus(User user) async {
+  Future<void> _togglePremiumStatus(UserModel user) async {
     final newStatus = !user.isPremium;
     await showDialog<void>(
       context: context,
@@ -99,14 +97,14 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  Future<void> _deleteUser(String username) async {
+  Future<void> _deleteUser(String userUid, String userName) async {
     await showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Delete User?'),
           content: Text(
-            'Are you sure you want to delete "$username"? This will also delete all their lists and items!',
+            'Are you sure you want to delete "$userName"? This will also delete all their lists and items!',
           ),
           actions: <Widget>[
             TextButton(
@@ -118,11 +116,11 @@ class _AdminScreenState extends State<AdminScreen> {
             TextButton(
               child: const Text('Delete'),
               onPressed: () async {
-                await _authRepository.deleteUser(username);
+                await _authRepository.deleteUser(userUid);
                 // ignore: use_build_context_synchronously
                 Navigator.of(dialogContext).pop();
                 _loadAdminData();
-                _showSnackBar('✅ User "$username" deleted successfully');
+                _showSnackBar('✅ User "$userName" deleted successfully');
               },
             ),
           ],
@@ -359,10 +357,8 @@ class _AdminScreenState extends State<AdminScreen> {
                             ),
                           ),
                           title: Text(user.username),
-                          subtitle: Text(user.email ?? 'No email'),
-                          trailing: user.labels.contains('admin')
-                              ? const Text('Admin', style: TextStyle(color: Colors.grey))
-                              : Row(
+                          subtitle: Text(user.email),
+                          trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
@@ -383,7 +379,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                         color: Colors.redAccent,
                                       ),
                                       onPressed: () =>
-                                          _deleteUser(user.username),
+                                          _deleteUser(user.uid, user.username),
                                     ),
                                   ],
                                 ),

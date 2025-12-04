@@ -99,10 +99,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (!isPremium)
               TextButton(
                 child: const Text('Upgrade Now'),
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                  // TODO: Implement actual upgrade flow
-                  _showSnackBar('Upgrade functionality not yet implemented.');
+                onPressed: () async {
+                  final user = await _authRepository.getCurrentUser();
+                  Navigator.of(dialogContext).pop(); // Close the dialog first
+                  if (user != null) {
+                    context.push(
+                      '/upgrade',
+                      extra: {'userEmail': user.email, 'userId': user.uid},
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not get user data. Please try again.')),
+                    );
+                  }
                 },
               ),
           ],

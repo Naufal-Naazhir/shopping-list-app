@@ -1,7 +1,7 @@
 import 'package:belanja_praktis/data/repositories/auth_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen>
   final AuthRepository _authRepository = GetIt.I<AuthRepository>();
   String? _errorMessage;
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
@@ -272,7 +273,7 @@ class _LoginScreenState extends State<LoginScreen>
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _passwordController,
-                            obscureText: true,
+                            obscureText: _obscurePassword,
                             decoration: InputDecoration(
                               hintText: 'Enter your password',
                               contentPadding: const EdgeInsets.symmetric(
@@ -298,6 +299,28 @@ class _LoginScreenState extends State<LoginScreen>
                                 borderSide: BorderSide(
                                   color: colorScheme.primary,
                                   width: 2,
+                                ),
+                              ),
+                              suffixIcon: SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: colorScheme.onSurface.withOpacity(
+                                      0.8,
+                                    ),
+                                    size: 20,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
+                                  padding: EdgeInsets.zero,
+                                  splashRadius: 20,
                                 ),
                               ),
                             ),
