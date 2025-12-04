@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color _primaryColor = Color(0xFF22B14C);
+  static const Color _primaryColor = Color(0xFF6A1B9A); // Dark purple color
 
   static ThemeData get lightTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: _primaryColor,
       brightness: Brightness.light,
       surface: Colors.white,
-      onSurface: Colors.black,
+      onSurface: const Color(0xFF212121), // Darker text for better contrast
       primary: _primaryColor,
+      primaryContainer: Color(0xFF9C4DCC), // Lighter purple for containers
       onPrimary: Colors.white,
+      secondary: Color(0xFF9C27B0), // Accent color
+      onSecondary: Colors.white,
+      surfaceVariant: Color(0xFFF3E5F5), // Light purple background
+      onSurfaceVariant: Color(
+        0xFF4A148C,
+      ), // Dark purple for text on light backgrounds
     );
 
     return ThemeData(
@@ -26,8 +33,10 @@ class AppTheme {
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: colorScheme.surface,
         selectedItemColor: colorScheme.primary,
-        unselectedItemColor: Colors.grey[600],
+        unselectedItemColor: colorScheme.onSurface.withOpacity(0.7),
+        selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
         type: BottomNavigationBarType.fixed,
+        elevation: 8,
       ),
       chipTheme: ChipThemeData(
         backgroundColor: colorScheme.primaryContainer,
@@ -43,16 +52,17 @@ class AppTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: _primaryColor,
       brightness: Brightness.dark,
-      surface: const Color(
-        0xFF121212,
-      ), // This will be the main background surface
-      onSurface: Colors.white, // This will be the main onSurface
+      surface: const Color(0xFF121212), // Dark background
+      onSurface: Colors.white, // White text on dark background
       primary: _primaryColor,
+      primaryContainer: Color(0xFF9C4DCC), // Lighter purple for containers
       onPrimary: Colors.white,
-      // The following surface and onSurface are for components, and are correctly placed.
-      // No need to change them.
-      // surface: const Color(0xFF1E1E1E),
-      // onSurface: Colors.white,
+      secondary: Color(0xFFCE93D8), // Lighter purple for accents
+      onSecondary: Colors.black,
+      surfaceVariant: Color(0xFF1E1E1E), // Slightly lighter than surface
+      onSurfaceVariant: Color(
+        0xFFD1C4E9,
+      ), // Light purple for text on dark backgrounds
     );
 
     return ThemeData(
@@ -66,10 +76,12 @@ class AppTheme {
         elevation: 0,
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: colorScheme.surfaceVariant,
         selectedItemColor: colorScheme.primary,
-        unselectedItemColor: Colors.grey[400],
+        unselectedItemColor: colorScheme.onSurfaceVariant.withOpacity(0.7),
+        selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
         type: BottomNavigationBarType.fixed,
+        elevation: 0,
       ),
       chipTheme: ChipThemeData(
         backgroundColor: colorScheme.primaryContainer,

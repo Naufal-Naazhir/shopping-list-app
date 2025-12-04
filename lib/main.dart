@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:appwrite/appwrite.dart';
 import 'package:belanja_praktis/config/app_router.dart';
 import 'package:belanja_praktis/config/app_theme.dart';
@@ -15,7 +16,7 @@ import 'package:belanja_praktis/presentation/bloc/payment_status_bloc.dart';
 import 'package:belanja_praktis/presentation/bloc/shopping_list_bloc.dart';
 import 'package:belanja_praktis/presentation/services/notification_service.dart';
 import 'package:belanja_praktis/services/ai_service.dart';
-import 'package:belanja_praktis/services/appwrite_user_service.dart'; // Tambahkan ini
+import 'package:belanja_praktis/services/appwrite_user_service.dart';
 import 'package:belanja_praktis/services/local_storage_service.dart';
 import 'package:belanja_praktis/services/theme_service.dart';
 import 'package:flutter/foundation.dart';
@@ -135,6 +136,8 @@ class MyApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeMode,
+            locale: const ui.Locale('id'),
+            debugShowCheckedModeBanner: false,
             routerConfig: AppRouter.router,
           );
         },

@@ -26,7 +26,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Upgrade to Premium')),
+      appBar: AppBar(title: const Text('Upgrade ke Premium')),
       body: BlocListener<PaymentBloc, PaymentState>(
         listener: (context, state) {
           if (state is PaymentWebViewRequired) {
@@ -45,7 +45,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
               ..showSnackBar(
                 const SnackBar(
                   content: Text(
-                    '✅ Payment Successful! Your account has been upgraded to Premium.',
+                    '✅ Pembayaran Berhasil! Akun Anda telah ditingkatkan ke Premium.',
                   ),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 3),
@@ -64,7 +64,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
               ..showSnackBar(
                 SnackBar(
                   content: Text(
-                    '❌ Payment Failed: ${state.message}\n\nPlease try again.',
+                    '❌ Pembayaran Gagal: ${state.message}\n\nSilakan coba lagi.',
                   ),
                   backgroundColor: Colors.red,
                   duration: const Duration(seconds: 4),
@@ -94,7 +94,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                      'Payment Initiation Failed',
+                      'Gagal Memulai Pembayaran',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -118,12 +118,12 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                         );
                       },
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
+                      label: const Text('Coba Lagi'),
                     ),
                     const SizedBox(height: 10),
                     TextButton(
                       onPressed: () => context.pop(),
-                      child: const Text('Cancel'),
+                      child: const Text('Batal'),
                     ),
                   ],
                 ),
@@ -141,19 +141,19 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                       const CircularProgressIndicator(),
                       const SizedBox(height: 20),
                       const Text(
-                        'Connecting to payment gateway...',
+                        'Menghubungkan ke gerbang pembayaran...',
                         style: TextStyle(fontSize: 16),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 30),
                       Text(
-                        'Premium Price: Rp 1.000',
+                        'Harga Premium: Rp 1.000',
                         style: Theme.of(context).textTheme.titleMedium,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Unlock unlimited lists, items, and ad-free experience',
+                        'Dapatkan daftar tak terbatas, item, dan pengalaman bebas iklan',
                         style: Theme.of(context).textTheme.bodySmall,
                         textAlign: TextAlign.center,
                       ),
@@ -163,7 +163,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.grey,
                         ),
-                        child: const Text('Cancel'),
+                        child: const Text('Batal'),
                       ),
                     ],
                   ),

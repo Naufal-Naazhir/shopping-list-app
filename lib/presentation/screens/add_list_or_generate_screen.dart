@@ -1,8 +1,8 @@
 import 'package:belanja_praktis/data/models/recipe_template_model.dart';
 import 'package:belanja_praktis/data/models/shopping_list_model.dart';
-import 'package:belanja_praktis/data/repositories/shopping_list_repository.dart';
-import 'package:belanja_praktis/data/repositories/auth_repository.dart';
 import 'package:belanja_praktis/data/models/user_model.dart';
+import 'package:belanja_praktis/data/repositories/auth_repository.dart';
+import 'package:belanja_praktis/data/repositories/shopping_list_repository.dart';
 import 'package:belanja_praktis/presentation/widgets/recipe_templates.dart';
 import 'package:belanja_praktis/services/ai_service.dart';
 import 'package:flutter/material.dart';
@@ -138,7 +138,8 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
         return AlertDialog(
           title: const Text('Fitur Premium'),
           content: const Text(
-              'Untuk mendapatkan langkah-langkah resep, Anda perlu meningkatkan ke premium.'),
+            'Untuk mendapatkan langkah-langkah resep, Anda perlu meningkatkan ke premium.',
+          ),
           actions: <Widget>[
             TextButton(
               child: const Text('Tutup'),
@@ -166,7 +167,8 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
         return AlertDialog(
           title: const Text('Fitur Premium'),
           content: const Text(
-              'Anda telah menggunakan semua generasi AI gratis Anda. Harap tingkatkan ke premium untuk menggunakan fitur ini lagi.'),
+            'Anda telah menggunakan semua generasi AI gratis Anda. Harap tingkatkan ke premium untuk menggunakan fitur ini lagi.',
+          ),
           actions: <Widget>[
             TextButton(
               child: const Text('Tutup'),
@@ -361,25 +363,75 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
   List<Widget> _buildManualListInput() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final primaryColor = colorScheme.primary;
 
     return [
       Text(
-        'Nama Daftar Belanja',
-        style: TextStyle(
-          fontSize: 16,
+        'Buat Daftar Belanja Baru',
+        style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.bold,
-          // color: Colors.black, // Removed to allow theme-based color
+          color: colorScheme.onSurface, // Use theme's onSurface color
         ),
       ),
-      const SizedBox(height: 10),
-      TextField(
-        controller: _listNameController,
-        decoration: InputDecoration(
-          hintText: 'Contoh: Belanja Bulanan',
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          filled: true,
-          // Use theme colors for better readability in light/dark mode
-          fillColor: colorScheme.surface.withOpacity(0.5),
+      const SizedBox(height: 20),
+      Text(
+        'Nama Daftar Belanja',
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: colorScheme.onSurface.withOpacity(
+            0.9,
+          ), // Slightly transparent onSurface
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: primaryColor.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _listNameController,
+          style: TextStyle(
+            fontSize: 16,
+            color: colorScheme.onSurface, // Use theme's onSurface color
+          ),
+          decoration: InputDecoration(
+            hintText: 'Contoh: Belanja Bulanan, Daftar Bulan Ini, dll.',
+            hintStyle: TextStyle(
+              color: colorScheme.onSurface.withOpacity(
+                0.6,
+              ), // Use theme's onSurface with opacity
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: primaryColor.withOpacity(0.5),
+                width: 1.5,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: colorScheme.onSurface.withOpacity(0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryColor, width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.transparent, // Transparent background
+          ),
         ),
       ),
       const SizedBox(height: 20),
@@ -388,14 +440,19 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
         child: ElevatedButton(
           onPressed: _isLoading ? null : _addShoppingList,
           style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 15),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
-            backgroundColor: Theme.of(
-              context,
-            ).primaryColor, // Use theme primary color
-            foregroundColor: Colors.white, // Text color
+            elevation: 3,
+            shadowColor: primaryColor.withOpacity(0.3),
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
           ),
           child: _isLoading
               ? const CircularProgressIndicator(color: Colors.white)

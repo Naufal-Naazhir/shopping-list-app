@@ -71,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen>
     } catch (e) {
       // Provide a user-friendly error message instead of the raw exception
       setState(() {
-        _errorMessage = '❌ Invalid email or password!';
+        _errorMessage = '❌ Email atau kata sandi salah!';
       });
     } finally {
       setState(() {
@@ -185,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            'Welcome Back!',
+                            'Selamat Datang!',
                             style: theme.textTheme.headlineMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: colorScheme.onSurface,
@@ -193,9 +193,12 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Sign in to continue to your lists',
+                            'Masuk untuk melanjutkan ke daftar Anda',
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurface.withOpacity(0.7),
+                              color: colorScheme.onSurface.withOpacity(
+                                0.9,
+                              ), // Increased opacity for better visibility
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -234,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen>
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
-                              hintText: 'Enter your email',
+                              hintText: 'Masukkan email Anda',
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 14,
@@ -275,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen>
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
-                              hintText: 'Enter your password',
+                              hintText: 'Masukkan kata sandi Anda',
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 14,
@@ -387,14 +390,20 @@ class _LoginScreenState extends State<LoginScreen>
                         TextSpan(
                           text: 'Don\'t have an account? ',
                           style: TextStyle(
-                            color: colorScheme.onSurface.withOpacity(0.7),
+                            color: colorScheme.onSurface.withOpacity(
+                              0.9,
+                            ), // Use theme color for better contrast
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
                           ),
                           children: [
                             TextSpan(
-                              text: 'Create one',
+                              text: 'Buat akun',
                               style: TextStyle(
-                                color: colorScheme.primary,
+                                color: colorScheme
+                                    .primary, // Use primary color for better visibility
                                 fontWeight: FontWeight.bold,
+                                fontSize: 15,
                               ),
                             ),
                           ],

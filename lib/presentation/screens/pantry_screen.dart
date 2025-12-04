@@ -85,9 +85,62 @@ class _PantryScreenState extends State<PantryScreen> {
     ); // Date formatter
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pantry')),
+
       body: Column(
         children: [
+            // Header for "Stok Rumah"
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Stok Rumah',
+                          style: TextStyle(
+                            fontSize: 32,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Lihat Stok yang sudah ada di rumah Anda',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: const Center(
+                      child: Text('📦', style: TextStyle(fontSize: 28)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: BlocConsumer<PantryBloc, PantryState>(
               listener: (context, state) {

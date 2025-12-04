@@ -71,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
-        _errorMessage = '❌ Passwords do not match!';
+        _errorMessage = '❌ Kata sandi tidak cocok!';
         _isLoading = false;
       });
       return; // Exit early
@@ -79,7 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     if (_usernameController.text.trim().length < 3) {
       setState(() {
-        _errorMessage = '❌ Username must be at least 3 characters!';
+        _errorMessage = '❌ Nama pengguna minimal 3 karakter!';
         _isLoading = false;
       });
       return; // Exit early
@@ -87,7 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     if (_passwordController.text.trim().length < 4) {
       setState(() {
-        _errorMessage = '❌ Password must be at least 4 characters!';
+        _errorMessage = '❌ Kata sandi minimal 4 karakter!';
         _isLoading = false;
       });
       return; // Exit early
@@ -105,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       if (user != null) {
         setState(() {
           _successMessage =
-              '✅ Account created successfully! Redirecting to login...';
+              '✅ Akun berhasil dibuat! Mengarahkan ke halaman login...';
         });
         await Future.delayed(const Duration(seconds: 1));
         context.go('/login');
@@ -225,7 +225,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            'Create Account',
+                            'Buat Akun',
                             style: theme.textTheme.headlineMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: colorScheme.onSurface,
@@ -233,9 +233,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Sign up to start managing your lists',
+                            'Daftar untuk mulai mengelola daftar belanja Anda',
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurface.withOpacity(0.7),
+                              color: colorScheme
+                                  .primary, // Changed to purple for better visibility
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -262,32 +264,50 @@ class _RegisterScreenState extends State<RegisterScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Username', style: theme.textTheme.titleSmall),
+                          Text(
+                            'Nama Pengguna',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _usernameController,
                             decoration: InputDecoration(
-                              hintText: 'Choose a username',
+                              hintText: 'Pilih nama pengguna',
                             ),
                           ),
                           const SizedBox(height: 16),
-                          Text('Email', style: theme.textTheme.titleSmall),
+                          Text(
+                            'Email',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
-                              hintText: 'your@email.com',
+                              hintText: 'contoh@email.com',
                             ),
                           ),
                           const SizedBox(height: 16),
-                          Text('Password', style: theme.textTheme.titleSmall),
+                          Text(
+                            'Kata Sandi',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
-                              hintText: 'Create a password',
+                              hintText: 'Buat kata sandi',
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
@@ -307,15 +327,18 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Confirm Password',
-                            style: theme.textTheme.titleSmall,
+                            'Konfirmasi Kata Sandi',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
                             decoration: InputDecoration(
-                              hintText: 'Confirm your password',
+                              hintText: 'Konfirmasi kata sandi Anda',
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscureConfirmPassword
@@ -383,7 +406,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                       color: Colors.white,
                                     )
                                   : Text(
-                                      'CREATE ACCOUNT',
+                                      'BUAT AKUN',
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -401,16 +424,19 @@ class _RegisterScreenState extends State<RegisterScreen>
                       onPressed: () => context.go('/login'),
                       child: Text.rich(
                         TextSpan(
-                          text: 'Already have an account? ',
+                          text: 'Sudah punya akun? ',
                           style: TextStyle(
-                            color: colorScheme.onSurface.withOpacity(0.7),
+                            color: colorScheme.onSurface.withOpacity(0.9),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
                           ),
                           children: [
                             TextSpan(
-                              text: 'Sign In',
+                              text: 'Masuk',
                               style: TextStyle(
                                 color: colorScheme.primary,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 15,
                               ),
                             ),
                           ],

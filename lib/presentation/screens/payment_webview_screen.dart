@@ -50,7 +50,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Error loading payment page: ${error.description}',
+                  'Gagal memuat halaman pembayaran: ${error.description}',
                 ),
                 backgroundColor: Colors.red,
               ),
@@ -65,7 +65,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Complete Payment'),
+        title: const Text('Selesaikan Pembayaran'),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () {
@@ -75,14 +75,14 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
               context: context,
               builder: (BuildContext dialogContext) {
                 return AlertDialog(
-                  title: const Text('Close Payment?'),
+                  title: const Text('Tutup Pembayaran?'),
                   content: const Text(
-                    'Are you sure you want to close? Payment might still be processing.',
+                    'Apakah Anda yakin ingin menutup? Pembayaran mungkin masih diproses.',
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(dialogContext),
-                      child: const Text('Continue Payment'),
+                      child: const Text('Lanjutkan Pembayaran'),
                     ),
                     TextButton(
                       onPressed: () {
@@ -94,7 +94,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
                           ),
                         );
                       },
-                      child: const Text('Close'),
+                      child: const Text('Tutup'),
                     ),
                   ],
                 );

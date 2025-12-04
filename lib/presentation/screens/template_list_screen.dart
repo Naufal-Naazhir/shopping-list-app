@@ -51,7 +51,7 @@ class _TemplateListScreenState extends State<TemplateListScreen>
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Recipe Templates')),
+      appBar: AppBar(title: const Text('Template Resep')),
       body: Column(
         children: [
           RecentTemplatesWidget(
@@ -91,7 +91,7 @@ class _TemplateListScreenState extends State<TemplateListScreen>
     final templates = _templateManager.getTemplatesByCategory(category);
 
     if (templates.isEmpty) {
-      return Center(child: Text('No templates in $category'));
+      return Center(child: Text('Tidak ada template di kategori $category'));
     }
 
     return ListView.builder(
@@ -117,7 +117,7 @@ class _TemplateListScreenState extends State<TemplateListScreen>
               ),
             ),
             subtitle: Text(
-              'Used ${template.useCount} times',
+              'Digunakan ${template.useCount} kali',
               style: TextStyle(color: categoryColor.withOpacity(0.7)),
             ),
             trailing: Row(
@@ -151,13 +151,13 @@ class _TemplateListScreenState extends State<TemplateListScreen>
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add New Template'),
+        title: const Text('Tambah Template Baru'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Template Name'),
+              decoration: const InputDecoration(labelText: 'Nama Template'),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
@@ -175,14 +175,14 @@ class _TemplateListScreenState extends State<TemplateListScreen>
                   selectedCategory = value;
                 }
               },
-              decoration: const InputDecoration(labelText: 'Category'),
+              decoration: const InputDecoration(labelText: 'Kategori'),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () async {
@@ -196,7 +196,7 @@ class _TemplateListScreenState extends State<TemplateListScreen>
                 Navigator.pop(context);
               }
             },
-            child: const Text('Add'),
+            child: const Text('Tambah'),
           ),
         ],
       ),
@@ -219,7 +219,7 @@ class _TemplateListScreenState extends State<TemplateListScreen>
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Template Name'),
+              decoration: const InputDecoration(labelText: 'Nama Template'),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
@@ -237,14 +237,14 @@ class _TemplateListScreenState extends State<TemplateListScreen>
                   selectedCategory = value;
                 }
               },
-              decoration: const InputDecoration(labelText: 'Category'),
+              decoration: const InputDecoration(labelText: 'Kategori'),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () async {
@@ -261,7 +261,7 @@ class _TemplateListScreenState extends State<TemplateListScreen>
                 Navigator.pop(context);
               }
             },
-            child: const Text('Save'),
+            child: const Text('Simpan'),
           ),
         ],
       ),
@@ -275,12 +275,14 @@ class _TemplateListScreenState extends State<TemplateListScreen>
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Template'),
-        content: Text('Are you sure you want to delete "${template.name}"?'),
+        title: const Text('Hapus Template'),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus template "${template.name}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () async {
@@ -288,7 +290,7 @@ class _TemplateListScreenState extends State<TemplateListScreen>
               setState(() {});
               Navigator.pop(context);
             },
-            child: const Text('Delete'),
+            child: const Text('Hapus'),
           ),
         ],
       ),

@@ -212,8 +212,8 @@ class _PremiumSuccessDialogState extends State<PremiumSuccessDialog>
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF9333EA),
+                        backgroundColor: const Color(0xFF9333EA),
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

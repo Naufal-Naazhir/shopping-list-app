@@ -7,8 +7,8 @@ import 'package:belanja_praktis/presentation/bloc/shopping_list_bloc.dart';
 import 'package:belanja_praktis/presentation/widgets/list_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -36,9 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _startPaymentMonitoring() async {
     final user = await _authRepository.getCurrentUser();
     if (user != null && mounted) {
-      context
-          .read<PaymentStatusBloc>()
-          .add(StartPaymentStatusMonitoring(user.uid));
+      context.read<PaymentStatusBloc>().add(
+        StartPaymentStatusMonitoring(user.uid),
+      );
     }
   }
 
@@ -77,13 +77,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkPremiumStatus() async {
     final wasPremium = _isCurrentUserPremium;
     _isCurrentUserPremium = await _authRepository.isCurrentUserPremium();
-    
+
     // If user just became premium, dispose the ad
     if (!wasPremium && _isCurrentUserPremium) {
       _bannerAd?.dispose();
       _bannerAd = null;
     }
-    
+
     setState(() {}); // Rebuild to reflect premium status
   }
 
@@ -115,10 +115,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 if (_editController.text.isNotEmpty) {
                   context.read<ShoppingListBloc>().add(
-                        UpdateShoppingList(
-                          list.copyWith(name: _editController.text),
-                        ),
-                      );
+                    UpdateShoppingList(
+                      list.copyWith(name: _editController.text),
+                    ),
+                  );
                   Navigator.of(dialogContext).pop();
                 }
               },
@@ -150,8 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Text('Delete'),
               onPressed: () {
                 context.read<ShoppingListBloc>().add(
-                      DeleteShoppingList(list.id.toString()),
-                    );
+                  DeleteShoppingList(list.id.toString()),
+                );
                 Navigator.of(dialogContext).pop();
               },
             ),
@@ -164,18 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Lists'),
-        actions: [
-          // IconButton(
-          //   icon: const Icon(Icons.exit_to_app),
-          //   onPressed: () async {
-          //     await _authRepository.logout();
-          //     context.go('/login');
-          //   },
-          // ),
-        ],
-      ),
+
       body: BlocListener<PaymentStatusBloc, PaymentStatusState>(
         listener: (context, state) {
           if (state is PaymentStatusSuccess) {
@@ -189,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: const Text("OK"),
-                  )
+                  ),
                 ],
               ),
             );
@@ -197,6 +186,59 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         child: Column(
           children: [
+            // Header for "Daftar Ku"
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Daftar Ku',
+                          style: TextStyle(
+                            fontSize: 32,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Lihat dan kelola daftar belanja Anda',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: const Center(
+                      child: Text('📝', style: TextStyle(fontSize: 28)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: BlocBuilder<ShoppingListBloc, ShoppingListState>(
                 builder: (context, state) {
@@ -211,16 +253,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Text(
-                                'No lists yet',
-                                style:
-                                    TextStyle(fontSize: 20, color: Colors.grey),
+                                'Belum ada daftar',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  color: Colors.grey,
+                                ),
                               ),
                               const SizedBox(height: 12),
                               const Text(
-                                'Tap the + button below to create your first list',
+                                'Klik tombol + di bawah untuk membuat daftar pertama Anda',
                                 textAlign: TextAlign.center,
-                                style:
-                                    TextStyle(fontSize: 16, color: Colors.grey),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ],
                           ),
@@ -277,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             label: const Text(
-              'NEW LIST',
+              'DAFTAR BARU',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -285,7 +331,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             icon: const Icon(Icons.add, color: Colors.white),
-            backgroundColor: const Color(0xFF22B14C),
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.primary, // Changed to theme purple
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(28),
             ),
@@ -302,17 +350,21 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Premium Feature'),
-          content: const Text('You have reached the maximum number of lists for free users. Upgrade to premium to create more lists.'),
+          backgroundColor: const Color(0xFF333333),
+          title: const Text('Fitur Premium', style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'Anda telah mencapai batas maksimal daftar untuk pengguna gratis. Tingkatkan ke premium untuk membuat lebih banyak daftar.',
+            style: TextStyle(color: Colors.white),
+          ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Close'),
+              child: const Text('Tutup', style: TextStyle(color: Colors.white)),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: const Text('Upgrade'),
+              child: const Text('Tingkatkan', style: TextStyle(color: Colors.white)),
               onPressed: () async {
                 final user = await _authRepository.getCurrentUser();
                 Navigator.of(context).pop(); // Close the dialog first
@@ -326,7 +378,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   _checkPremiumStatus();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Could not get user data. Please try again.')),
+                    const SnackBar(
+                      content: Text(
+                        'Could not get user data. Please try again.',
+                      ),
+                    ),
                   );
                 }
               },
@@ -337,4 +393,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
