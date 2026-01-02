@@ -1,27 +1,27 @@
+import 'package:belanja_praktis/data/repositories/auth_repository.dart';
+import 'package:belanja_praktis/data/repositories/shopping_list_repository.dart';
+import 'package:belanja_praktis/presentation/bloc/list_detail_bloc.dart';
+import 'package:belanja_praktis/presentation/screens/add_item_screen.dart';
+import 'package:belanja_praktis/presentation/screens/add_list_or_generate_screen.dart';
+import 'package:belanja_praktis/presentation/screens/admin_screen.dart';
+import 'package:belanja_praktis/presentation/screens/home_screen.dart';
 import 'package:belanja_praktis/presentation/screens/list_detail_screen.dart';
+import 'package:belanja_praktis/presentation/screens/login_screen.dart';
 import 'package:belanja_praktis/presentation/screens/pantry_screen.dart';
+import 'package:belanja_praktis/presentation/screens/payment_webview_screen.dart';
 import 'package:belanja_praktis/presentation/screens/premium_analytics_screen.dart';
+import 'package:belanja_praktis/presentation/screens/profile_screen.dart';
+import 'package:belanja_praktis/presentation/screens/register_screen.dart';
+import 'package:belanja_praktis/presentation/screens/saweria_webview_page.dart';
 import 'package:belanja_praktis/presentation/screens/settings_screen.dart';
 import 'package:belanja_praktis/presentation/screens/shell_screen.dart';
 import 'package:belanja_praktis/presentation/screens/splash_screen.dart';
-import 'package:belanja_praktis/presentation/screens/saweria_webview_page.dart';
-import 'package:belanja_praktis/presentation/screens/payment_webview_screen.dart';
+import 'package:belanja_praktis/presentation/screens/upgrade_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:belanja_praktis/presentation/screens/home_screen.dart';
-
-import 'package:belanja_praktis/presentation/screens/profile_screen.dart';
-import 'package:belanja_praktis/presentation/screens/login_screen.dart';
-import 'package:belanja_praktis/presentation/screens/register_screen.dart';
-import 'package:belanja_praktis/presentation/screens/add_list_or_generate_screen.dart';
-import 'package:belanja_praktis/presentation/screens/add_item_screen.dart';
-import 'package:belanja_praktis/presentation/screens/admin_screen.dart';
-import 'package:belanja_praktis/data/repositories/auth_repository.dart';
-import 'package:belanja_praktis/presentation/bloc/list_detail_bloc.dart';
-import 'package:belanja_praktis/data/repositories/shopping_list_repository.dart';
-import 'package:belanja_praktis/presentation/screens/payment_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -56,9 +56,12 @@ class AppRouter {
         path: '/add-item/:listId',
         builder: (BuildContext context, GoRouterState state) {
           final listId = state.pathParameters['listId']!;
-          return AddItemScreen(
-            listId: listId,
-            listName: state.extra as String? ?? 'Shopping List',
+          return Provider<ShoppingListRepository>.value(
+            value: GetIt.I<ShoppingListRepository>(),
+            child: AddItemScreen(
+              listId: listId,
+              listName: state.extra as String? ?? 'Shopping List',
+            ),
           );
         },
       ),
@@ -122,19 +125,7 @@ class AppRouter {
       GoRoute(
         path: '/upgrade',
         builder: (BuildContext context, GoRouterState state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final userEmail = extra?['userEmail'] as String?;
-          final userId = extra?['userId'] as String?;
-          
-          if (userEmail == null || userId == null) {
-            return const Text('Error: User data missing for PaymentPage');
-          }
-          final authRepository = GetIt.I<AuthRepository>();
-          return PaymentPage(
-            userEmail: userEmail,
-            userId: userId,
-            client: authRepository.client, // Pass the authenticated client
-          );
+          return const UpgradeScreen();
         },
       ),
       GoRoute(
@@ -158,15 +149,14 @@ class AppRouter {
       ),
     ],
     redirect: (BuildContext context, GoRouterState state) async {
+      final isonSplashScreen = state.matchedLocation == '/splash';
+      if (isonSplashScreen) return null;
+
       final auth = GetIt.I<AuthRepository>();
       final isLoggedIn = await auth.isLoggedIn();
       final onAuthScreen =
-          state.matchedLocation == '/login' || state.matchedLocation == '/register';
-      final isonSplashScreen = state.matchedLocation == '/splash';
-
-      if (isonSplashScreen) {
-        return isLoggedIn ? '/' : '/login';
-      }
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register';
 
       // --- LOGGED OUT USERS ---
       if (!isLoggedIn) {

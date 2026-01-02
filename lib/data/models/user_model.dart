@@ -21,8 +21,8 @@ class UserModel {
       uid: json['uid'] ?? json['\$id'] ?? '',
       username: json['username'] ?? json['name'] ?? '',
       email: json['email'] ?? '',
-      isPremium: json['prefs']?['isPremium'] ?? json['isPremium'] ?? false,
-      aiUsesRemaining: json['prefs']?['aiUsesRemaining'] ?? json['aiUsesRemaining'] ?? 5,
+      isPremium: json['isPremium'] ?? json['prefs']?['isPremium'] ?? false,
+      aiUsesRemaining: json['aiUsesRemaining'] ?? 5,
     );
   }
 

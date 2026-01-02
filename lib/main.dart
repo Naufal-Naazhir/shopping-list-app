@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+
 import 'package:appwrite/appwrite.dart';
 import 'package:belanja_praktis/config/app_router.dart';
 import 'package:belanja_praktis/config/app_theme.dart';
@@ -12,11 +13,11 @@ import 'package:belanja_praktis/data/repositories/shopping_list_repository.dart'
 import 'package:belanja_praktis/data/repositories/shopping_list_repository_impl.dart';
 import 'package:belanja_praktis/presentation/bloc/pantry_bloc.dart';
 import 'package:belanja_praktis/presentation/bloc/payment/payment_bloc.dart';
-import 'package:belanja_praktis/presentation/bloc/payment_status_bloc.dart';
 import 'package:belanja_praktis/presentation/bloc/shopping_list_bloc.dart';
 import 'package:belanja_praktis/presentation/services/notification_service.dart';
 import 'package:belanja_praktis/services/ai_service.dart';
 import 'package:belanja_praktis/services/appwrite_user_service.dart';
+import 'package:belanja_praktis/services/iap_service.dart';
 import 'package:belanja_praktis/services/local_storage_service.dart';
 import 'package:belanja_praktis/services/theme_service.dart';
 import 'package:flutter/foundation.dart';
@@ -51,10 +52,6 @@ Future<void> setupDependencies({bool isTest = false}) async {
     final notificationService = NotificationService();
     await notificationService.init();
     getIt.registerSingleton<NotificationService>(notificationService);
-
-    if (!kIsWeb) {
-      MobileAds.instance.initialize();
-    }
   }
 
   getIt.registerSingleton<PantryRepository>(
@@ -91,13 +88,38 @@ Future<void> setupDependencies({bool isTest = false}) async {
     ThemeService(getIt<LocalStorageService>()),
   );
 
+  getIt.registerSingleton<IapService>(IapService());
+
   await getIt<AuthRepository>().initializePremiumAccounts();
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+
+  // Load .env file with error handling
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    print('Warning: Failed to load .env file: $e');
+    // Continue execution even if .env fails to load
+  }
+
   await setupDependencies();
+
+  // Initialize services
+  if (!kIsWeb) {
+    MobileAds.instance.initialize();
+  }
+
+  // CRITICAL: Wait for IAP to initialize so purchase stream is ready
+  try {
+    await getIt<IapService>().initialize();
+    print('IAP Service initialized successfully');
+  } catch (e) {
+    print('IAP Service initialization failed: $e');
+    // Continue anyway - app should still work without IAP
+  }
+
   runApp(const MyApp());
 }
 
@@ -126,7 +148,6 @@ class MyApp extends StatelessWidget {
           create: (context) =>
               PaymentBloc(paymentRepository: getIt<PaymentRepository>()),
         ),
-        BlocProvider(create: (context) => PaymentStatusBloc(getIt<Client>())),
       ],
       child: ValueListenableBuilder<ThemeMode>(
         valueListenable: getIt<ThemeService>().themeModeNotifier,

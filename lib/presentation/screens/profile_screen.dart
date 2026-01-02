@@ -1,4 +1,5 @@
 import 'package:belanja_praktis/data/repositories/auth_repository.dart';
+import 'package:belanja_praktis/presentation/screens/donation_page.dart';
 import 'package:belanja_praktis/services/theme_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
@@ -12,7 +13,8 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen>
+    with WidgetsBindingObserver {
   final AuthRepository _authRepository = GetIt.I<AuthRepository>();
   final ThemeService _themeService = GetIt.I<ThemeService>();
   // final LanguageService _languageService = GetIt.I<LanguageService>();
@@ -21,38 +23,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUserData();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Refresh user data when app resumes
+      _refreshUserData();
+    }
+  }
+
   Future<void> _loadUserData() async {
-    final user = await _authRepository.getCurrentUser();
-    if (user != null) {
-      setState(() {
-        _username = user.username;
-      });
+    try {
+      final user = await _authRepository.getCurrentUser();
+      if (user != null && mounted) {
+        setState(() {
+          _username = user.username;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Gagal memuat data pengguna: ${e.toString()}');
+      }
+    }
+  }
+
+  Future<void> _refreshUserData() async {
+    try {
+      await _authRepository.refreshUser();
+      await _loadUserData();
+      if (mounted) {
+        debugPrint('User data refreshed from database');
+      }
+    } catch (e) {
+      debugPrint('Error refreshing user data: $e');
     }
   }
 
   Future<void> _handleLogout() async {
     return showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF333333),
-          title: const Text('Sampai Jumpa!', style: TextStyle(color: Colors.white)),
+          title: const Text('Konfirmasi Keluar'),
           content: const Text(
-            'Apakah Anda yakin ingin keluar? Data Anda akan tetap tersimpan.',
-            style: TextStyle(color: Colors.white),
+            'Apakah Anda yakin ingin keluar? Data Anda akan tetap tersimpan dengan aman.',
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Batal', style: TextStyle(color: Colors.white)),
+              child: const Text('Batal'),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
               },
             ),
             TextButton(
-              child: const Text('Keluar', style: TextStyle(color: Colors.white)),
+              child: const Text('Keluar'),
               onPressed: () async {
                 await _authRepository.logout();
                 Navigator.of(dialogContext).pop();
@@ -73,62 +107,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _launchUrl(String urlString) async {
     final Uri url = Uri.parse(urlString);
-    if (!await launchUrl(url)) {
-      _showSnackBar('Tidak dapat membuka $urlString');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        _showSnackBar('Tidak dapat membuka tautan');
+      }
     }
-  }
-
-  Future<void> _showPremiumInfoDialog() async {
-    final isPremium = await _authRepository.isCurrentUserPremium();
-    return showDialog<void>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF333333),
-          title: const Text('Hapus Iklan', style: TextStyle(color: Colors.white)),
-          content: isPremium
-              ? const Text(
-                  'Anda sudah pengguna premium! Nikmati pengalaman bebas iklan.',
-                  style: TextStyle(color: Colors.white),
-                )
-              : const Text(
-                  'Upgrade ke Premium untuk menghapus iklan dan membuka fitur eksklusif!',
-                  style: TextStyle(color: Colors.white),
-                ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Tutup', style: TextStyle(color: Colors.white)),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-            ),
-            if (!isPremium)
-              TextButton(
-                child: const Text('Upgrade Sekarang',
-                    style: TextStyle(color: Colors.white)),
-                onPressed: () async {
-                  final user = await _authRepository.getCurrentUser();
-                  Navigator.of(dialogContext).pop(); // Close the dialog first
-                  if (user != null) {
-                    context.push(
-                      '/upgrade',
-                      extra: {'userEmail': user.email, 'userId': user.uid},
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Tidak dapat mengambil data pengguna. Silakan coba lagi.',
-                        ),
-                      ),
-                    );
-                  }
-                },
-              ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _showThemeDialog() async {
@@ -320,22 +303,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   _buildMenuItem(
                     icon: '💎',
-                    title: 'Hapus Iklan',
-                    onTap: _showPremiumInfoDialog,
+                    title: 'Upgrade Premium',
+                    subtitle: 'Hapus iklan & buka semua fitur',
+                    onTap: () {
+                      context.push('/upgrade');
+                    },
+                  ),
+                  _buildMenuItem(
+                    icon: '☕',
+                    title: 'Dukung Kami',
+                    subtitle: 'Bantu kami tetap berkembang',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DonationPage(),
+                        ),
+                      );
+                    },
                   ),
                   _buildMenuItem(
                     icon: '❤️',
                     title: 'Suka dengan aplikasi ini?',
                     subtitle: 'Beri kami ⭐⭐⭐⭐⭐ di Google Play',
                     onTap: () => _launchUrl(
-                      'https://play.google.com/store/apps/details?id=com.example.belanja_praktis',
+                      'https://play.google.com/store/apps/details?id=com.belanjapintar.app',
                     ),
                   ),
                   _buildMenuItem(
                     icon: '💬',
                     title: 'Bantuan & Masukan',
                     onTap: () => _launchUrl(
-                      'mailto:support@belanjapraktis.com?subject=App Feedback&body=Hello Belanja Praktis Team,',
+                      'mailto:belanjapintarkami@gmail.com?subject=App Feedback&body=Hello Belanja Pintar Team,',
                     ),
                   ),
                   // _buildMenuItem(
@@ -358,7 +357,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       TextButton(
                         onPressed: () => _launchUrl(
-                          'https://www.example.com/privacy',
+                          'https://sites.google.com/view/belanjapintar-privacy-policy/halaman-muka',
                         ), // Placeholder URL
                         child: const Text(
                           'KEBIJAKAN PRIVASI',
@@ -374,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       TextButton(
                         onPressed: () => _launchUrl(
-                          'https://www.example.com/terms',
+                          'https://sites.google.com/view/belanjapintar-terms/halaman-muka',
                         ), // Placeholder URL
                         child: const Text(
                           'SYARAT LAYANAN',
@@ -388,7 +387,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Versi 0.1.0 Beta',
+                    'App Version 1.0.0',
                     style: TextStyle(color: Color(0xFFBBBBBB), fontSize: 14),
                   ),
                   const SizedBox(height: 20), // Space for bottom nav
@@ -407,68 +406,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? subtitle,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE0E0E0)),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          width: 1,
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(10),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(icon, style: const TextStyle(fontSize: 20)),
+                ),
               ),
-              child: Center(
-                child: Text(icon, style: const TextStyle(fontSize: 20)),
-              ), // Adjusted font size
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF333333),
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 4),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      subtitle,
+                      title,
                       style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF666666),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).hintColor,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: Color(0xFF999999),
-              size: 16,
-            ),
-          ],
+              const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            ],
+          ),
         ),
       ),
     );

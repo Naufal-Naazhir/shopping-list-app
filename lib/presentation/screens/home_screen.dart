@@ -1,15 +1,11 @@
 import 'package:belanja_praktis/data/models/shopping_list_model.dart';
 import 'package:belanja_praktis/data/repositories/auth_repository.dart';
-import 'package:belanja_praktis/presentation/bloc/payment_status_bloc.dart';
-import 'package:belanja_praktis/presentation/bloc/payment_status_event.dart';
-import 'package:belanja_praktis/presentation/bloc/payment_status_state.dart';
 import 'package:belanja_praktis/presentation/bloc/shopping_list_bloc.dart';
 import 'package:belanja_praktis/presentation/widgets/list_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,70 +17,23 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final AuthRepository _authRepository = GetIt.I<AuthRepository>();
   bool _isCurrentUserPremium = false;
-  BannerAd? _bannerAd;
 
   @override
   void initState() {
     super.initState();
-    _startPaymentMonitoring();
     _checkPremiumStatus();
     // Ensure lists are loaded when the screen initializes
     context.read<ShoppingListBloc>().add(LoadShoppingLists());
-    _loadBannerAd();
   }
 
-  Future<void> _startPaymentMonitoring() async {
-    final user = await _authRepository.getCurrentUser();
-    if (user != null && mounted) {
-      context.read<PaymentStatusBloc>().add(
-        StartPaymentStatusMonitoring(user.uid),
-      );
-    }
-  }
-
-  void _loadBannerAd() async {
-    // Only load ads if user is not premium
-    final isPremium = await _authRepository.isCurrentUserPremium();
-    if (!isPremium) {
-      _bannerAd = BannerAd(
-        adUnitId: 'ca-app-pub-3940256099942544/6300978111',
-        request: const AdRequest(),
-        size: AdSize.banner,
-        listener: BannerAdListener(
-          onAdLoaded: (ad) {
-            setState(() {});
-          },
-          onAdFailedToLoad: (ad, err) {
-            ad.dispose();
-          },
-        ),
-      )..load();
-    }
+  Future<void> _checkPremiumStatus() async {
+    _isCurrentUserPremium = await _authRepository.isCurrentUserPremium();
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    _bannerAd?.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _checkPremiumStatus(); // Re-check premium status when dependencies change (e.g., returning from another screen)
-  }
-
-  Future<void> _checkPremiumStatus() async {
-    final wasPremium = _isCurrentUserPremium;
-    _isCurrentUserPremium = await _authRepository.isCurrentUserPremium();
-
-    // If user just became premium, dispose the ad
-    if (!wasPremium && _isCurrentUserPremium) {
-      _bannerAd?.dispose();
-      _bannerAd = null;
-    }
-
-    setState(() {}); // Rebuild to reflect premium status
   }
 
   Future<void> _showEditListModal(
@@ -161,152 +110,146 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showUpgradeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Batas Tercapai'),
+        content: const Text(
+          'Anda telah mencapai batas 5 daftar. Upgrade ke premium untuk membuat daftar tanpa batas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Tutup'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await context.push('/upgrade');
+              _checkPremiumStatus();
+            },
+            child: const Text('Upgrade'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
-      body: BlocListener<PaymentStatusBloc, PaymentStatusState>(
-        listener: (context, state) {
-          if (state is PaymentStatusSuccess) {
-            _checkPremiumStatus(); // Refresh the UI to reflect premium status
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text("Pembayaran Berhasil! 👑"),
-                content: Text(state.message),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("OK"),
-                  ),
+      body: Column(
+        children: [
+          // Header for "Daftar Ku"
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primary.withOpacity(0.8),
                 ],
-              ),
-            );
-          }
-        },
-        child: Column(
-          children: [
-            // Header for "Daftar Ku"
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Daftar Ku',
-                          style: TextStyle(
-                            fontSize: 32,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Lihat dan kelola daftar belanja Anda',
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    child: const Center(
-                      child: Text('📝', style: TextStyle(fontSize: 28)),
-                    ),
-                  ),
-                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
-            Expanded(
-              child: BlocBuilder<ShoppingListBloc, ShoppingListState>(
-                builder: (context, state) {
-                  if (state is ShoppingListLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (state is ShoppingListLoaded) {
-                    if (state.lists.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                'Belum ada daftar',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'Klik tombol + di bawah untuk membuat daftar pertama Anda',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Daftar Ku',
+                        style: TextStyle(
+                          fontSize: 32,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
-                      );
-                    } else {
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(20),
-                        itemCount: state.lists.length,
-                        itemBuilder: (context, index) {
-                          final list = state.lists[index];
-                          return ListCard(
-                            list: list,
-                            index: index,
-                            onEdit: () => _showEditListModal(context, list),
-                            onDelete: () => _showDeleteListModal(context, list),
-                          );
-                        },
-                      );
-                    }
-                  } else if (state is ShoppingListError) {
-                    return Center(child: Text('Error: ${state.message}'));
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Lihat dan kelola daftar belanja Anda',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: const Center(
+                    child: Text('📝', style: TextStyle(fontSize: 28)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: BlocBuilder<ShoppingListBloc, ShoppingListState>(
+              builder: (context, state) {
+                if (state is ShoppingListLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (state is ShoppingListLoaded) {
+                  if (state.lists.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Belum ada daftar',
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Klik tombol + di bawah untuk membuat daftar pertama Anda',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  } else {
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: state.lists.length,
+                      itemBuilder: (context, index) {
+                        final list = state.lists[index];
+                        return ListCard(
+                          list: list,
+                          index: index,
+                          onEdit: () => _showEditListModal(context, list),
+                          onDelete: () => _showDeleteListModal(context, list),
+                        );
+                      },
+                    );
                   }
-                  return const Center(child: Text('Unknown state'));
-                },
-              ),
+                } else if (state is ShoppingListError) {
+                  return Center(child: Text('Error: ${state.message}'));
+                }
+                return const Center(child: Text('Unknown state'));
+              },
             ),
-            if (_bannerAd != null && !_isCurrentUserPremium)
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: SafeArea(
-                  child: SizedBox(
-                    width: _bannerAd!.size.width.toDouble(),
-                    height: _bannerAd!.size.height.toDouble(),
-                    child: AdWidget(ad: _bannerAd!),
-                  ),
-                ),
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
       floatingActionButton: BlocBuilder<ShoppingListBloc, ShoppingListState>(
         builder: (context, state) {
@@ -314,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {
               if (state is ShoppingListLoaded) {
                 if (!_isCurrentUserPremium && state.lists.length >= 5) {
-                  _showPremiumDialog(context);
+                  _showUpgradeDialog(context);
                 } else {
                   context.go('/add-list');
                 }
@@ -342,54 +285,6 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-    );
-  }
-
-  void _showPremiumDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF333333),
-          title: const Text('Fitur Premium', style: TextStyle(color: Colors.white)),
-          content: const Text(
-            'Anda telah mencapai batas maksimal daftar untuk pengguna gratis. Tingkatkan ke premium untuk membuat lebih banyak daftar.',
-            style: TextStyle(color: Colors.white),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Tutup', style: TextStyle(color: Colors.white)),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Tingkatkan', style: TextStyle(color: Colors.white)),
-              onPressed: () async {
-                final user = await _authRepository.getCurrentUser();
-                Navigator.of(context).pop(); // Close the dialog first
-                if (user != null) {
-                  // Wait for the user to return from the payment page
-                  await context.push(
-                    '/upgrade',
-                    extra: {'userEmail': user.email, 'userId': user.uid},
-                  );
-                  // After returning, force a refresh of the premium status
-                  _checkPremiumStatus();
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Could not get user data. Please try again.',
-                      ),
-                    ),
-                  );
-                }
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }

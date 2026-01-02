@@ -1,8 +1,10 @@
+import 'package:appwrite/appwrite.dart';
+import 'package:belanja_praktis/config/appwrite_db.dart';
 import 'package:belanja_praktis/data/models/user_model.dart';
 import 'package:belanja_praktis/data/repositories/auth_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -42,17 +44,31 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Future<void> _loadAdminData() async {
-    // Temporarily bypass getAllUsers() as it's not implemented yet.
-    // This allows the admin screen to load without crashing.
-    print('Admin data loading bypassed: getAllUsers() is not implemented.');
-    _showSnackBar('User data not available. Admin function not implemented.');
-    setState(() {
-      _users = []; // Ensure user list is empty
-      _totalUsers = 0;
-      _premiumUsers = 0;
-      _freeUsers = 0;
-    });
-    // The actual implementation will involve calling the Appwrite Function.
+    try {
+      // Get all users from the repository
+      final users = await _authRepository.getAllUsers();
+
+      // Calculate statistics
+      final totalUsers = users.length;
+      final premiumUsers = users.where((user) => user.isPremium).length;
+      final freeUsers = totalUsers - premiumUsers;
+
+      setState(() {
+        _users = users;
+        _totalUsers = totalUsers;
+        _premiumUsers = premiumUsers;
+        _freeUsers = freeUsers;
+      });
+    } catch (e) {
+      print('Error loading admin data: $e');
+      _showSnackBar('❌ Failed to load user data: ${e.toString()}');
+      setState(() {
+        _users = [];
+        _totalUsers = 0;
+        _premiumUsers = 0;
+        _freeUsers = 0;
+      });
+    }
   }
 
   Future<void> _togglePremiumStatus(UserModel user) async {
@@ -75,20 +91,42 @@ class _AdminScreenState extends State<AdminScreen> {
             TextButton(
               child: Text(newStatus ? 'Grant' : 'Revoke'),
               onPressed: () async {
-                // NOTE: The following method must be implemented in your AuthRepository.
-                // It should take the user's ID and the new premium status.
-                // await _authRepository.updateUserPremiumStatus(user.id, newStatus);
+                try {
+                  // Find the user document by uid
+                  final databases = GetIt.I<Databases>();
+                  final response = await databases.listDocuments(
+                    databaseId: AppwriteDB.databaseId,
+                    collectionId: AppwriteDB.usersCollectionId,
+                    queries: [Query.equal('uid', user.uid)],
+                  );
 
-                // For demonstration, we just reload the data.
-                // In a real app, the line above should be used and this delay removed.
-                await Future.delayed(const Duration(milliseconds: 500));
+                  if (response.documents.isEmpty) {
+                    throw Exception('User document not found.');
+                  }
 
-                // ignore: use_build_context_synchronously
-                Navigator.of(dialogContext).pop();
-                _loadAdminData();
-                _showSnackBar(
-                  '✅ Premium status for "${user.username}" updated.',
-                );
+                  final docId = response.documents.first.$id;
+
+                  // Update the premium status
+                  await databases.updateDocument(
+                    databaseId: AppwriteDB.databaseId,
+                    collectionId: AppwriteDB.usersCollectionId,
+                    documentId: docId,
+                    data: {'isPremium': newStatus},
+                  );
+
+                  // ignore: use_build_context_synchronously
+                  Navigator.of(dialogContext).pop();
+                  await _loadAdminData();
+                  _showSnackBar(
+                    '✅ Premium status for "${user.username}" updated.',
+                  );
+                } catch (e) {
+                  // ignore: use_build_context_synchronously
+                  Navigator.of(dialogContext).pop();
+                  _showSnackBar(
+                    '❌ Failed to update premium status: ${e.toString()}',
+                  );
+                }
               },
             ),
           ],
@@ -200,9 +238,7 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -256,14 +292,16 @@ class _AdminScreenState extends State<AdminScreen> {
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
                   backgroundColor: const Color(0xFF667EEA),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
+                  ),
                   textStyle: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -359,30 +397,29 @@ class _AdminScreenState extends State<AdminScreen> {
                           title: Text(user.username),
                           subtitle: Text(user.email),
                           trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      tooltip: 'Toggle Premium Status',
-                                      icon: Icon(
-                                        Icons.workspace_premium,
-                                        color: user.isPremium
-                                            ? Colors.amber.shade700
-                                            : Colors.grey,
-                                      ),
-                                      onPressed: () =>
-                                          _togglePremiumStatus(user),
-                                    ),
-                                    IconButton(
-                                      tooltip: 'Delete User',
-                                      icon: const Icon(
-                                        Icons.delete,
-                                        color: Colors.redAccent,
-                                      ),
-                                      onPressed: () =>
-                                          _deleteUser(user.uid, user.username),
-                                    ),
-                                  ],
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: 'Toggle Premium Status',
+                                icon: Icon(
+                                  Icons.workspace_premium,
+                                  color: user.isPremium
+                                      ? Colors.amber.shade700
+                                      : Colors.grey,
                                 ),
+                                onPressed: () => _togglePremiumStatus(user),
+                              ),
+                              IconButton(
+                                tooltip: 'Delete User',
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.redAccent,
+                                ),
+                                onPressed: () =>
+                                    _deleteUser(user.uid, user.username),
+                              ),
+                            ],
+                          ),
                         );
                       },
                     ),

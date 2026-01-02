@@ -1,14 +1,16 @@
 import 'package:belanja_praktis/data/models/shopping_list_model.dart';
+import 'package:belanja_praktis/data/repositories/auth_repository.dart';
 import 'package:belanja_praktis/data/repositories/shopping_list_repository.dart';
 import 'package:belanja_praktis/presentation/bloc/list_detail_bloc.dart';
+import 'package:belanja_praktis/presentation/widgets/native_ad_widget.dart';
 import 'package:belanja_praktis/presentation/widgets/shopping_item_card.dart';
 import 'package:belanja_praktis/utils/price_utils.dart';
-import 'package:belanja_praktis/utils/shelf_life_data.dart'; // Import shelf life data
+import 'package:belanja_praktis/utils/shelf_life_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart'; // New import
+import 'package:intl/intl.dart';
 
 class ListDetailScreen extends StatefulWidget {
   final String listId;
@@ -22,11 +24,23 @@ class ListDetailScreen extends StatefulWidget {
 class _ListDetailScreenState extends State<ListDetailScreen> {
   final ShoppingListRepository _shoppingListRepository =
       GetIt.I<ShoppingListRepository>();
+  final AuthRepository _authRepository = GetIt.I<AuthRepository>();
+  bool _isPremium = false;
 
   @override
   void initState() {
     super.initState();
     context.read<ListDetailBloc>().add(LoadListDetail(widget.listId));
+    _checkPremiumStatus();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final isPremium = await _authRepository.isCurrentUserPremium();
+    if (mounted) {
+      setState(() {
+        _isPremium = isPremium;
+      });
+    }
   }
 
   Future<void> _showDeleteConfirmationDialog(ShoppingItem item) async {
@@ -137,8 +151,9 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
 
   Future<void> _showEditItemDialog(ShoppingItem item) async {
     final nameController = TextEditingController(text: item.name);
-    final quantityController =
-        TextEditingController(text: item.quantity.toString());
+    final quantityController = TextEditingController(
+      text: item.quantity.toString(),
+    );
     final priceController = TextEditingController(text: item.price.toString());
 
     final confirmed = await showDialog<bool>(
@@ -207,8 +222,8 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       );
 
       context.read<ListDetailBloc>().add(
-            UpdateShoppingItem(widget.listId, updatedItem),
-          );
+        UpdateShoppingItem(widget.listId, updatedItem),
+      );
     }
   }
 
@@ -349,14 +364,37 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                 }
               }
 
+              // Calculate total items including ads
+              final totalItemsWithAds = _isPremium
+                  ? state.items.length
+                  : state.items.length + (state.items.length ~/ 6);
+
               return Column(
                 children: [
                   Expanded(
                     child: ListView.builder(
                       padding: const EdgeInsets.all(20),
-                      itemCount: state.items.length,
+                      itemCount: totalItemsWithAds,
                       itemBuilder: (context, index) {
-                        final item = state.items[index];
+                        // Show native ad every 6 items for non-premium users
+                        if (!_isPremium && (index + 1) % 7 == 0) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: NativeAdWidget(),
+                          );
+                        }
+
+                        // Calculate actual item index (accounting for ads)
+                        final itemIndex = _isPremium
+                            ? index
+                            : index - (index ~/ 7);
+
+                        // Safety check
+                        if (itemIndex >= state.items.length) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final item = state.items[itemIndex];
                         return ShoppingItemCard(
                           item: item,
                           onToggle: (bool? value) {
@@ -371,8 +409,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                             }
                           },
                           onDelete: () => _showDeleteConfirmationDialog(item),
-                          onMoveToPantry: () =>
-                              _showMoveToPantryDialog(item), // New logic
+                          onMoveToPantry: () => _showMoveToPantryDialog(item),
                           onEdit: () => _showEditItemDialog(item),
                           formatPrice: (price) =>
                               PriceUtils.formatPrice(price.toInt()),

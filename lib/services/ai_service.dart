@@ -76,7 +76,11 @@ class AIService {
     }
   }
 
-  Future<Map<String, dynamic>> _generateFromAI(String query) async {
+  Future<Map<String, dynamic>> _generateFromAI(
+    String query, {
+    int retryCount = 0,
+    int maxRetries = 3,
+  }) async {
     String prompt;
     final queryLower = query.toLowerCase();
     final recipeKeywords = [
@@ -142,6 +146,27 @@ Aturan: Satuan harus umum (misal: buah, kg, pack). Harga dalam Rupiah tanpa simb
           }
         } else {
           throw Exception('AI response does not contain "text" field.');
+        }
+      } else if (response.statusCode == 429) {
+        // Rate limit error - implement exponential backoff retry
+        if (retryCount < maxRetries) {
+          // Calculate exponential backoff: 1s, 2s, 4s
+          final delaySeconds = 1 << retryCount; // 2^retryCount
+          print(
+            '⚠️ Rate limited (429). Retrying in ${delaySeconds}s (attempt ${retryCount + 1}/$maxRetries)',
+          );
+          await Future.delayed(Duration(seconds: delaySeconds));
+          // Recursive retry with incremented count
+          return _generateFromAI(
+            query,
+            retryCount: retryCount + 1,
+            maxRetries: maxRetries,
+          );
+        } else {
+          // Max retries exceeded
+          throw Exception(
+            'Rate limit exceeded. AI service is temporarily unavailable. Silakan coba lagi dalam beberapa menit.',
+          );
         }
       } else {
         throw Exception(

@@ -1,7 +1,9 @@
 import 'dart:async';
-import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:appwrite/appwrite.dart';
 import 'package:belanja_praktis/config/appwrite_db.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'payment_event.dart';
 import 'payment_state.dart';
 
@@ -20,7 +22,10 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
   }
 
   // Logic 1: Mulai Berlangganan (Subscribe)
-  void _onStartMonitoring(StartPaymentMonitoring event, Emitter<PaymentState> emit) {
+  void _onStartMonitoring(
+    StartPaymentMonitoring event,
+    Emitter<PaymentState> emit,
+  ) {
     // Pastikan tidak double subscription
     subscription?.close();
 
@@ -30,16 +35,18 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
 
     // Subscribe ke dokumen spesifik user ini
     subscription = realtime.subscribe([
-      'databases.$dbId.collections.$colId.documents.$docId'
+      'databases.$dbId.collections.$colId.documents.$docId',
     ]);
 
     // Dengarkan stream
     subscription!.stream.listen((realtimeEvent) {
-      if (realtimeEvent.events.any((e) => e.contains('.documents.${event.userId}.update'))) {
+      if (realtimeEvent.events.any(
+        (e) => e.contains('.documents.${event.userId}.update'),
+      )) {
         final payload = realtimeEvent.payload;
-        
+
         // Cek apakah status berubah jadi premium
-        if (payload['is_premium'] == true) {
+        if (payload['isPremium'] == true) {
           // JANGAN emit langsung di dalam listen, tapi panggil Event baru
           add(PaymentStatusUpdated(true));
         }
@@ -48,7 +55,10 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
   }
 
   // Logic 2: Update State ke UI
-  void _onStatusUpdated(PaymentStatusUpdated event, Emitter<PaymentState> emit) {
+  void _onStatusUpdated(
+    PaymentStatusUpdated event,
+    Emitter<PaymentState> emit,
+  ) {
     if (event.isPremium) {
       emit(PaymentSuccess("Selamat! Akun Anda kini Premium."));
     }

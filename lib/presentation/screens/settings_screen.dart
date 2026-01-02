@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -8,6 +9,31 @@ class SettingsScreen extends StatelessWidget {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _launchUrl(BuildContext context, String urlString) async {
+    try {
+      final Uri url = Uri.parse(urlString);
+      final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (!ok) {
+        _showSnackBar(context, 'Tidak dapat membuka tautan');
+      }
+    } catch (_) {
+      _showSnackBar(context, 'Tidak dapat membuka tautan');
+    }
+  }
+
+  Future<void> _launchEmail(BuildContext context) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'belanjapintarkami@gmail.com',
+      queryParameters: <String, String>{
+        'subject': 'App Feedback',
+        'body': 'Halo Tim Belanja Praktis,',
+      },
+    );
+
+    await _launchUrl(context, emailUri.toString());
   }
 
   @override
@@ -32,10 +58,7 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Remove Ads',
                 onTap: () {
                   // TODO: Implement Remove Ads functionality
-                  _showSnackBar(
-                    context,
-                    'Remove Ads functionality not yet implemented.',
-                  );
+                  context.push('/upgrade');
                 },
               ),
               _buildSettingsItem(
@@ -43,9 +66,9 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Rate Us on Play Store',
                 onTap: () {
                   // TODO: Implement Rate Us functionality
-                  _showSnackBar(
+                  _launchUrl(
                     context,
-                    'Rate Us functionality not yet implemented.',
+                    'https://play.google.com/store/apps/details?id=com.belanjapintar.app',
                   );
                 },
               ),
@@ -54,10 +77,7 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Send Feedback',
                 onTap: () {
                   // TODO: Implement Send Feedback functionality
-                  _showSnackBar(
-                    context,
-                    'Send Feedback functionality not yet implemented.',
-                  );
+                  _launchEmail(context);
                 },
               ),
               _buildSettingsItem(
@@ -65,10 +85,7 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Privacy Policy',
                 onTap: () {
                   // TODO: Implement Privacy Policy functionality
-                  _showSnackBar(
-                    context,
-                    'Privacy Policy functionality not yet implemented.',
-                  );
+                  _launchUrl(context, 'https://sites.google.com/view/belanjapintar-privacy-policy/halaman-muka');
                 },
               ),
               _buildSettingsItem(
@@ -76,17 +93,14 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Terms of Service',
                 onTap: () {
                   // TODO: Implement Terms of Service functionality
-                  _showSnackBar(
-                    context,
-                    'Terms of Service functionality not yet implemented.',
-                  );
+                  _launchUrl(context, 'https://sites.google.com/view/belanjapintar-terms/halaman-muka');
                 },
               ),
               const SizedBox(height: 40),
               // App Version
               const Center(
                 child: Text(
-                  'App Version 1.0.0 (MVP)',
+                  'App Version 1.0.0',
                   style: TextStyle(color: Color(0xFF888888)),
                 ),
               ),

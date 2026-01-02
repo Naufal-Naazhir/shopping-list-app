@@ -1,4 +1,4 @@
-package com.example.belanja_praktis
+package com.belanjapintar.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -14,6 +14,9 @@ abstract class AuthRepository extends ChangeNotifier {
   Future<void> deleteUser(String userUid); // New method
   Future<void> clearAllUsersExceptAdmin(); // New method
   Future<bool> isCurrentUserPremium();
-  Future<void> decrementAiUses(UserModel user);
+  Future<int> calculateAiQuota(
+    String userId,
+  ); // NEW: Calculate quota dynamically
   Future<bool> isAdmin(String userUid); // Tambahkan ini
+  Future<void> refreshUser();
 }

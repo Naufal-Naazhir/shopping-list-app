@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // Add the Google services Gradle plugin
@@ -5,11 +8,18 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    
 }
 
+// -- START: Load Key Properties --
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+// -- END: Load Key Properties --
+
 android {
-    namespace = "com.example.belanja_praktis"
+    namespace = "com.belanjapintar.app"
     // Compile SDK biarkan default dari Flutter, biasanya 34
     compileSdk = flutter.compileSdkVersion 
 
@@ -34,7 +44,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.belanja_praktis"
+        applicationId = "com.belanjapintar.app"
         //MyFlutterAppAndroidKey ID: 6LcifgYsAAAAAGuYryJtyx_37Xd94E__bFFb2T4t
         
         // You can update the following values to match your application needs.
@@ -49,11 +59,25 @@ android {
         multiDexEnabled = true
     }
 
+    // -- START: Define Signing Configs --
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
+        }
+    }
+    // -- END: Define Signing Configs --
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Gunakan signingConfig release yang baru dibuat
+            signingConfig = signingConfigs.getByName("release")
+            
+            // PENTING: Matikan minification/obfuscation sementara untuk debugging black screen
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

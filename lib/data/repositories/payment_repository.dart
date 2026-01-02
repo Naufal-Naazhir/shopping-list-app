@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:fpdart/fpdart.dart';
@@ -41,7 +40,7 @@ class PaymentRepository {
         body: requestBody,
       );
 
-      if (result.status == 'completed') {
+      if (result.status.name == 'completed') {
         final responseData = jsonDecode(result.responseBody);
         if (responseData['paymentUrl'] != null) {
           return right(responseData['paymentUrl']);
@@ -74,7 +73,7 @@ class PaymentRepository {
         body: jsonEncode({'merchantOrderId': merchantOrderId}),
       );
 
-      if (result.status == 'completed') {
+      if (result.status.name == 'completed') {
         final responseData = jsonDecode(result.responseBody);
         if (responseData['success'] == true) {
           return right(responseData['transactionStatus']);

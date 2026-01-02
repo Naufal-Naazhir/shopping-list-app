@@ -1,4 +1,5 @@
 import 'package:belanja_praktis/data/repositories/auth_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
@@ -55,6 +56,15 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  // Method to handle test account login
+  Future<void> _loginWithTestAccount() async {
+    setState(() {
+      _emailController.text = 'demo@google.com'; // Use your test account email
+      _passwordController.text = 'demo12345'; // Use your test account password
+    });
+    await _handleLogin();
+  }
+
   Future<void> _handleLogin() async {
     setState(() {
       _isLoading = true;
@@ -74,9 +84,11 @@ class _LoginScreenState extends State<LoginScreen>
         _errorMessage = '❌ Email atau kata sandi salah!';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -236,6 +248,7 @@ class _LoginScreenState extends State<LoginScreen>
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
+                            autofillHints: const [AutofillHints.email],
                             decoration: InputDecoration(
                               hintText: 'Masukkan email Anda',
                               contentPadding: const EdgeInsets.symmetric(
@@ -245,14 +258,18 @@ class _LoginScreenState extends State<LoginScreen>
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide(
-                                  color: colorScheme.onSurface.withOpacity(0.2),
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   width: 1,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide(
-                                  color: colorScheme.onSurface.withOpacity(0.2),
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   width: 1,
                                 ),
                               ),
@@ -277,6 +294,8 @@ class _LoginScreenState extends State<LoginScreen>
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
+                            keyboardType: TextInputType.visiblePassword,
+                            autofillHints: const [AutofillHints.password],
                             decoration: InputDecoration(
                               hintText: 'Masukkan kata sandi Anda',
                               contentPadding: const EdgeInsets.symmetric(
@@ -286,14 +305,18 @@ class _LoginScreenState extends State<LoginScreen>
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide(
-                                  color: colorScheme.onSurface.withOpacity(0.2),
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   width: 1,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide(
-                                  color: colorScheme.onSurface.withOpacity(0.2),
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   width: 1,
                                 ),
                               ),
@@ -312,8 +335,8 @@ class _LoginScreenState extends State<LoginScreen>
                                     _obscurePassword
                                         ? Icons.visibility_off
                                         : Icons.visibility,
-                                    color: colorScheme.onSurface.withOpacity(
-                                      0.8,
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.8,
                                     ),
                                     size: 20,
                                   ),
@@ -383,30 +406,75 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Register Link
-                    TextButton(
-                      onPressed: () => context.go('/register'),
-                      child: Text.rich(
-                        TextSpan(
-                          text: 'Don\'t have an account? ',
-                          style: TextStyle(
-                            color: colorScheme.onSurface.withOpacity(
-                              0.9,
-                            ), // Use theme color for better contrast
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: 'Buat akun',
-                              style: TextStyle(
-                                color: colorScheme
-                                    .primary, // Use primary color for better visibility
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                    // Test Account Button (only visible in debug mode or for Google Play review)
+                    if (kDebugMode ||
+                        const bool.fromEnvironment('IS_GOOGLE_PLAY_REVIEW'))
+                      Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: _isLoading
+                                  ? null
+                                  : _loginWithTestAccount,
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: BorderSide(
+                                  color: colorScheme.primary,
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Gunakan Akun Test',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.primary,
+                                ),
                               ),
                             ),
-                          ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Hanya untuk keperluan pengujian',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                    // Register Link
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: TextButton(
+                        onPressed: () => context.go('/register'),
+                        child: Text.rich(
+                          TextSpan(
+                            text: 'Belum punya akun? ',
+                            style: TextStyle(
+                              color: colorScheme.onSurface.withOpacity(0.9),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Buat akun',
+                                style: TextStyle(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

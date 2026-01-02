@@ -33,11 +33,24 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
   List<ShoppingItem> _generatedShoppingItems = [];
   double _generatedTotal = 0;
   List<String> _generatedSteps = []; // To hold recipe steps
+  int _quotaRefreshKey = 0; // Key to force FutureBuilder rebuild
 
   @override
   void initState() {
     super.initState();
     _fetchCurrentUser();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh quota when screen becomes visible again
+    // Increment key to force FutureBuilder rebuild
+    if (_currentUser != null && !_currentUser!.isPremium && mounted) {
+      setState(() {
+        _quotaRefreshKey++; // Force FutureBuilder to rebuild
+      });
+    }
   }
 
   Future<void> _fetchCurrentUser() async {
@@ -62,23 +75,17 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
       return;
     }
 
-    final query = _recipeController.text.trim(); // Moved this line here
-
-    // Premium check for AI uses remaining
-    if (!_currentUser!.isPremium && _currentUser!.aiUsesRemaining <= 0) {
-      _showPremiumDialog();
-      return;
-    }
-
-    // Premium check for recipe steps
+    // Check premium status and AI usage limits
     if (!_currentUser!.isPremium) {
-      final stepsKeywords = ['langkah', 'cara membuat', 'how to make', 'steps'];
-      final queryLower = query.toLowerCase();
-      if (stepsKeywords.any((keyword) => queryLower.contains(keyword))) {
-        _showPremiumDialogForSteps();
+      // Calculate current quota dynamically
+      final quota = await _authRepository.calculateAiQuota(_currentUser!.uid);
+      if (quota <= 0) {
+        _showUpgradeDialog(context);
         return;
       }
     }
+
+    final query = _recipeController.text.trim(); // Moved this line here
 
     if (query.isEmpty) {
       _showSnackBar('Input tidak boleh kosong!');
@@ -97,13 +104,6 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
       final Map<String, dynamic> aiResponse = await _aiService
           .generateShoppingList(recipeQuery);
 
-      // Decrement AI uses for non-premium users
-      if (!_currentUser!.isPremium) {
-        await _authRepository.decrementAiUses(_currentUser!);
-        // Refresh user state
-        await _fetchCurrentUser();
-      }
-
       final List<ShoppingItem> generatedItems =
           aiResponse['items'] as List<ShoppingItem>;
       final double total = aiResponse['total'] as double;
@@ -115,12 +115,38 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
           _generatedTotal = total;
           _generatedSteps = steps; // Save the steps
         });
+
+        // Debug print
+        debugPrint('Generated ${generatedItems.length} items');
+        debugPrint('Total: $total');
+        for (var item in generatedItems) {
+          debugPrint(
+            'Item: ${item.name}, Qty: ${item.quantity}, Price: ${item.price}',
+          );
+        }
+
+        // No need to decrement - quota is calculated dynamically based on list count
       }
     } catch (e, stackTrace) {
       debugPrint('AI Generation Error: $e');
       debugPrint('Stack Trace: $stackTrace');
       if (mounted) {
-        _showSnackBar('Gagal menghasilkan daftar dari AI: ${e.toString()}');
+        // Check if it's a rate limit error
+        final errorMsg = e.toString();
+        if (errorMsg.contains('429') ||
+            errorMsg.contains('Rate limit exceeded') ||
+            errorMsg.contains('temporarily unavailable') ||
+            errorMsg.contains('Please wait and try again later')) {
+          _showRateLimitDialog(context);
+        } else {
+          // Show user-friendly error dialog instead of scary technical message
+          _showErrorDialog(
+            context,
+            'Gagal Menghasilkan Daftar',
+            'Maaf, terjadi kesalahan saat membuat daftar belanja dengan AI. '
+                'Silakan coba lagi atau gunakan mode manual.',
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -131,61 +157,40 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
     }
   }
 
-  void _showPremiumDialogForSteps() {
+  void _showRateLimitDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Fitur Premium'),
-          content: const Text(
-            'Untuk mendapatkan langkah-langkah resep, Anda perlu meningkatkan ke premium.',
+      builder: (ctx) => AlertDialog(
+        title: const Text('⏳ Batas Laju Tercapai'),
+        content: const Text(
+          'AI Service sedang sibuk dan telah mencapai batas penggunaan. '
+          'Sistem sudah mencoba lagi secara otomatis, tetapi tetap gagal.\n\n'
+          'Silakan coba lagi dalam beberapa menit. 🙏',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Tutup'),
           ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Tutup'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Upgrade'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.go('/premium-analytics');
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showPremiumDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Fitur Premium'),
-          content: const Text(
-            'Anda telah menggunakan semua generasi AI gratis Anda. Harap tingkatkan ke premium untuk menggunakan fitur ini lagi.',
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              // Refresh quota before retry
+              if (mounted) {
+                setState(() {
+                  _quotaRefreshKey++;
+                });
+              }
+              // Retry the generation
+              await Future.delayed(const Duration(seconds: 2));
+              if (mounted) {
+                await _generateListFromRecipe();
+              }
+            },
+            child: const Text('Coba Lagi'),
           ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Tutup'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Upgrade'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.go('/premium-analytics');
-              },
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -259,6 +264,64 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
     }
   }
 
+  void _showUpgradeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Batas AI Tercapai'),
+        content: const Text(
+          'Anda telah menghabiskan kuota AI gratis. Upgrade ke premium untuk penggunaan tanpa batas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Tutup'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await context.push('/upgrade');
+              if (mounted) {
+                await _fetchCurrentUser();
+              }
+            },
+            child: const Text('Upgrade'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Tutup'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              // Refresh quota before retry
+              if (mounted) {
+                setState(() {
+                  _quotaRefreshKey++;
+                });
+              }
+              // Retry the generation
+              _generateListFromRecipe();
+            },
+            child: const Text('Coba Lagi'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(
       context,
@@ -323,38 +386,39 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
           onPressed: () => context.go('/'),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment<bool>(
-                    value: true,
-                    label: Text('Manual'),
-                    icon: Icon(Icons.edit),
-                  ),
-                  ButtonSegment<bool>(
-                    value: false,
-                    label: Text('Generate AI'),
-                    icon: Icon(Icons.auto_awesome),
-                  ),
-                ],
-                selected: <bool>{_isManualMode},
-                onSelectionChanged: (Set<bool> newSelection) {
-                  setState(() {
-                    _isManualMode = newSelection.first;
-                  });
-                },
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment<bool>(
+                      value: true,
+                      label: Text('Manual'),
+                      icon: Icon(Icons.edit),
+                    ),
+                    ButtonSegment<bool>(
+                      value: false,
+                      label: Text('Generate AI'),
+                      icon: Icon(Icons.auto_awesome),
+                    ),
+                  ],
+                  selected: <bool>{_isManualMode},
+                  onSelectionChanged: (Set<bool> newSelection) {
+                    setState(() {
+                      _isManualMode = newSelection.first;
+                    });
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            if (_isManualMode) ..._buildManualListInput(),
-            if (!_isManualMode)
-              Expanded(child: Column(children: _buildRecipeInput())),
-          ],
+              const SizedBox(height: 20),
+              if (_isManualMode) ..._buildManualListInput(),
+              if (!_isManualMode) Column(children: _buildRecipeInput()),
+            ],
+          ),
         ),
       ),
     );
@@ -479,23 +543,39 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
           ),
         ),
         const SizedBox(height: 10),
-        Expanded(
+        Container(
+          height: 300,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: ListView.builder(
             itemCount: this._generatedShoppingItems.length,
             itemBuilder: (context, index) {
               final item = this._generatedShoppingItems[index];
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 4),
+                margin: const EdgeInsets.symmetric(vertical: 2),
+                elevation: 1,
                 child: ListTile(
-                  title: Text(item.name),
+                  dense: true,
+                  title: Text(
+                    item.name,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
                   subtitle: Text(
-                    'Jumlah: ${item.quantity}, Harga: ${item.price}',
+                    'Jumlah: ${item.quantity} | Harga: Rp${item.price.toStringAsFixed(0)}',
+                    style: TextStyle(color: Colors.grey.shade600),
                   ),
                   trailing: IconButton(
-                    icon: const Icon(Icons.delete),
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
                     onPressed: () {
                       setState(() {
                         this._generatedShoppingItems.removeAt(index);
+                        // Recalculate total when item is removed
+                        _generatedTotal = _generatedShoppingItems.fold(
+                          0.0,
+                          (sum, item) => sum + (item.price * item.quantity),
+                        );
                       });
                     },
                   ),
@@ -506,7 +586,7 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
         ),
         const SizedBox(height: 12),
         // Premium feature button for recipe steps
-        if (_currentUser?.isPremium == true && _generatedSteps.isNotEmpty)
+        if (_generatedSteps.isNotEmpty)
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -554,6 +634,27 @@ class _AddListOrGenerateScreenState extends State<AddListOrGenerateScreen> {
           'Buat daftar dengan AI',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
+        if (_currentUser != null && !_currentUser!.isPremium)
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0),
+            child: FutureBuilder<int>(
+              key: ValueKey(_quotaRefreshKey), // Force rebuild when key changes
+              future: _authRepository.calculateAiQuota(_currentUser!.uid),
+              builder: (context, snapshot) {
+                final quota = snapshot.data ?? 0;
+                return Text(
+                  'Sisa kuota AI: $quota',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: quota > 0 ? Colors.orange.shade800 : Colors.red,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                );
+              },
+            ),
+          ),
         const SizedBox(height: 10),
         TextField(
           controller: _recipeController,
